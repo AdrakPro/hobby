@@ -6,6 +6,7 @@
 // 4. Faster HashMap implementation`
 // 5. Allocating the right
 // 6. memchr for scanning
+// TODO continue
 #![feature(slice_split_once, slice_internals)]
 
 use core::slice::memchr::memchr;
@@ -102,6 +103,7 @@ fn main() {
         let Some(separator) = memchr(b';', data) else { break; };
         let end = memchr(b'\n', &data[separator..]).unwrap();
         let name = &data[..separator];
+        // Start from slice from separator + 1 to separator + end
         let value = &data[separator + 1..separator + end];
 
         h.entry(to_key(name))
