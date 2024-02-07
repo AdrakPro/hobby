@@ -4,9 +4,11 @@
 // 1. Bytes instead of strings; strings are checked to be valid UTF8
 // 2. Manual parsing; instead of parsing as f32, parse manually to a fixed-precision i32 signed integer
 // 3. Inline hash keys
+// 4. Faster HashMap implementation`
 #![feature(slice_split_once)]
 
-use std::{collections::HashMap, env::args, io::Read};
+use std::{env::args, io::Read};
+use fxhash::FxHashMap;
 
 type V = i32;
 
@@ -89,7 +91,7 @@ fn main() {
         assert_eq!(data.pop(), Some(b'\n'));
     }
 
-    let mut h = HashMap::new();
+    let mut h = FxHashMap::default();
 
     for line in data.split(|&c| c == b'\n') {
         let (name, value) = line.split_once(|&c| c == b';').unwrap();
