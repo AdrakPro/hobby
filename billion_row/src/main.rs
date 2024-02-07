@@ -1,8 +1,9 @@
 // https://curiouscoding.nl/posts/1brc/
 // Optimizations:
-// No optimization -> 877.4 ms
-// 1. Bytes instead of strings; strings are checked to be valid UTF8 -> 132.5 ms
+// No optimization
+// 1. Bytes instead of strings; strings are checked to be valid UTF8
 // 2. Manual parsing; instead of parsing as f32, parse manually to a fixed-precision i32 signed integer
+// 3. Inline hash keys
 #![feature(slice_split_once)]
 
 use std::{collections::HashMap, env::args, io::Read};
@@ -65,6 +66,20 @@ fn format(v: V) -> String {
     format!("{:.1}", v as f64 / 10.0)
 }
 
+fn to_key(name: &[u8]) -> u64 {
+    // Initializes an array key of length 8 with zeros
+    let mut key = [0u8; 8];
+    let l = name.len().min(8);
+
+    // It copies the first l bytes from name to key.
+    key[..l].copy_from_slice(&name[..l]);
+    // The bitwise XOR operation compares corresponding bits of two operands.
+    // If the bits are the same, the result is 0, otherwise, it's 1
+    // Only Alexandra and Alexandria coincide, so we’ll xor in the length of the string to make them unique
+    key[0] ^= name.len() as u8;
+    u64::from_ne_bytes(key)
+}
+
 fn main() {
     let filename = args().nth(1).unwrap_or("measurements-small.txt".to_string());
     let mut data = vec![];
@@ -79,18 +94,22 @@ fn main() {
     for line in data.split(|&c| c == b'\n') {
         let (name, value) = line.split_once(|&c| c == b';').unwrap();
 
-        h.entry(name).or_insert(Record::default()).add(parse(value));
+        h.entry(to_key(name))
+            .or_insert((Record::default(), name))
+            .0
+            .add(parse(value))
     }
 
     let mut v = h.into_iter().collect::<Vec<_>>();
     v.sort_unstable_by_key(|p| p.0);
 
-    for (name, r) in v {
-        println!("{}: {:.1}/{:.1}/{:.1}",
-                 std::str::from_utf8(name).unwrap(),
-                 format(r.min),
-                 format(r.avg()),
-                 format(r.max)
-        )
+    for (_key, (r, name)) in v {
+        println!(
+            "{}: {}/{}/{}",
+            std::str::from_utf8(name).unwrap(),
+            format(r.min),
+            format(r.avg()),
+            format(r.max)
+        );
     }
 }
