@@ -5,6 +5,7 @@
 // 2. Manual parsing; instead of parsing as f32, parse manually to a fixed-precision i32 signed integer
 // 3. Inline hash keys
 // 4. Faster HashMap implementation`
+// 5. Allocating the right size
 #![feature(slice_split_once)]
 
 use std::{env::args, io::Read};
@@ -83,9 +84,11 @@ fn to_key(name: &[u8]) -> u64 {
 }
 
 fn main() {
-    let filename = args().nth(1).unwrap_or("measurements-small.txt".to_string());
+    let filename = &args().nth(1).unwrap_or("measurements-small.txt".to_string());
     let mut data = vec![];
     {
+        let stat = std::fs::metadata(filename).unwrap();
+        data.reserve(stat.len() as usize + 1);
         let mut file = std::fs::File::open(filename).unwrap();
         file.read_to_end(&mut data).unwrap();
         assert_eq!(data.pop(), Some(b'\n'));
