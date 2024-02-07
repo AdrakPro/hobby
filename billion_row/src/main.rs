@@ -1,14 +1,16 @@
 // https://curiouscoding.nl/posts/1brc/
 // Optimizations:
-// No optimization
 // 1. Bytes instead of strings; strings are checked to be valid UTF8
 // 2. Manual parsing; instead of parsing as f32, parse manually to a fixed-precision i32 signed integer
 // 3. Inline hash keys
 // 4. Faster HashMap implementation`
-// 5. Allocating the right size
-#![feature(slice_split_once)]
+// 5. Allocating the right
+// 6. memchr for scanning
+#![feature(slice_split_once, slice_internals)]
 
+use core::slice::memchr::memchr;
 use std::{env::args, io::Read};
+
 use fxhash::FxHashMap;
 
 type V = i32;
@@ -58,7 +60,7 @@ fn parse(mut s: &[u8]) -> V {
         [c] => (0, 0, 0, c - b'0'),
         [b, c] => (0, b - b'0', c - b'0', 0),
         [a, b, c] => (a - b'0', b - b'0', c - b'0', 0),
-        _ => panic!("Unknown patters {:?}", std::str::from_utf8(s).unwrap()),
+        _ => panic!("Unknown pattern {:?}", std::str::from_utf8(s).unwrap()),
     };
     let v = a as V * 1000 + b as V * 100 + c as V * 10 + d as V;
 
@@ -95,16 +97,19 @@ fn main() {
     }
 
     let mut h = FxHashMap::default();
-
-    for line in data.split(|&c| c == b'\n') {
-        let (name, value) = line.split_once(|&c| c == b';').unwrap();
+    let mut data = &data[..];
+    loop {
+        let Some(separator) = memchr(b';', data) else { break; };
+        let end = memchr(b'\n', &data[separator..]).unwrap();
+        let name = &data[..separator];
+        let value = &data[separator + 1..separator + end];
 
         h.entry(to_key(name))
             .or_insert((Record::default(), name))
             .0
-            .add(parse(value))
+            .add(parse(value));
+        data = &data[separator + end + 1..]
     }
-
     let mut v = h.into_iter().collect::<Vec<_>>();
     v.sort_unstable_by_key(|p| p.0);
 
