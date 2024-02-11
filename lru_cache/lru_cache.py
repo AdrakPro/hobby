@@ -24,6 +24,7 @@ class Cache:
         self.time = cache_time
         # Dict provides average O(1) search/insert/delete
         self.cache = {}
+        self.expires = PriorityQueue()
 
     # Functions needed in cache:
     # get(key: String)
@@ -43,8 +44,11 @@ class Cache:
         now = self.time()
 
         # If the same element is in cache remove and insert again
+        # Tuples (expires, key) compare lexicographically, it will be like comparing by expires alone, but with key along
         if key in self.cache:
-            self.cache.pop(key)
+            item = self.cache.pop(key)
+            self.expires.remove((item.expires, key))
+            del item
         # Evict if the max cache size is exceeded
         elif len(self.cache) >= self.max_size:
             self.evict(now)
@@ -52,11 +56,54 @@ class Cache:
         expires = int(now + max_age)
 
         self.cache[key] = Item(key, value, expires, priority)
+        self.expires.insert((expires, key))
 
+    # First point of LRU - Expiration time
     def evict(self, now):
         if not self.cache:
             return
 
-        # The oldest key is the first (dicts preserve insertion order)
-        key = next(iter(self.cache))
-        del self.cache[key]
+        initial_size = len(self.cache)
+
+        while self.cache:
+            expires, key = self.expires.peek()
+
+            if expires > now:
+                break
+
+            self.expires.pop()
+            del self.cache[key]
+
+        if len(self.cache) == initial_size:
+            _, key = self.expires.pop()
+            del self.cache[key]
+
+
+# Need a data structure which will efficiently remove the smallest element
+# https://en.wikipedia.org/wiki/Priority_queue
+class PriorityQueue:
+    def __init__(self):
+        self.data = []
+
+    # O(1)
+    def is_empty(self):
+        return len(self.data) == 0
+
+    # O(1)
+    def peek(self):
+        return self.data[0]
+
+    # O(n), shift all the items left by one position
+    def pop(self):
+        first_element = self.data[0]
+        self.data[:1] = []
+        return first_element
+
+    # O(n)
+    def remove(self, item: tuple):
+        self.data.remove(item)
+
+    # O(n log n), can be optimized to O(n) with Timsort for example
+    def insert(self, item: tuple):
+        self.data.append(item)
+        self.data.sort()
