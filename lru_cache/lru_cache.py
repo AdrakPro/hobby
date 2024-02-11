@@ -44,6 +44,7 @@ class Cache:
         if self.time() >= item.expires:
             return None
 
+        # If data is used move to the end to avoid evict
         self.priority_buckets[item.priority].move_to_end(key)
 
         return item.value
