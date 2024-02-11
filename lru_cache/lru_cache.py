@@ -85,7 +85,6 @@ class Cache:
         self.priorities.remove((priority, key))
 
 
-
 # Need a data structure which will efficiently remove the smallest element
 # https://en.wikipedia.org/wiki/Priority_queue
 class PriorityQueue:

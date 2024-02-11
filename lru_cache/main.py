@@ -5,6 +5,7 @@ from lru_cache import Cache, PriorityQueue
 
 # First write tests, later implementation
 
+
 class FakeTime:
     def __init__(self, now=0):
         self.now = now
@@ -101,27 +102,28 @@ def test_update_expires():
 def test_priority():
     cache = Cache(2, FakeTime())
 
-    cache.set('a', 'A', priority=1)
-    cache.set('b', 'B', priority=0)
-    assert cache.get('a') == 'A'
-    assert cache.get('b') == 'B'
+    cache.set("a", "A", priority=1)
+    cache.set("b", "B", priority=0)
+    assert cache.get("a") == "A"
+    assert cache.get("b") == "B"
 
-    cache.set('c', 'C')
-    assert cache.get('a') == 'A'
-    assert cache.get('b') == None
-    assert cache.get('c') == 'C'
+    cache.set("c", "C")
+    assert cache.get("a") == "A"
+    assert cache.get("b") == None
+    assert cache.get("c") == "C"
+
 
 def test_update_priorities():
     cache = Cache(2, FakeTime())
 
-    cache.set('a', 'A', priority=1)
-    cache.set('b', 'B', priority=0)
-    cache.set('b', 'Y', priority=2)
+    cache.set("a", "A", priority=1)
+    cache.set("b", "B", priority=0)
+    cache.set("b", "Y", priority=2)
 
-    cache.set('c', 'C')
-    assert cache.get('a') == None
-    assert cache.get('b') == 'Y'
-    assert cache.get('c') == 'C'
+    cache.set("c", "C")
+    assert cache.get("a") == None
+    assert cache.get("b") == "Y"
+    assert cache.get("c") == "C"
 
 
 if __name__ == "__main__":
