@@ -25,6 +25,7 @@ class Cache:
         # Dict provides average O(1) search/insert/delete
         self.cache = {}
         self.expires = PriorityQueue()
+        self.priorities = PriorityQueue()
 
     # Functions needed in cache:
     # get(key: String)
@@ -48,6 +49,7 @@ class Cache:
         if key in self.cache:
             item = self.cache.pop(key)
             self.expires.remove((item.expires, key))
+            self.priorities.remove((item.priority, key))
             del item
         # Evict if the max cache size is exceeded
         elif len(self.cache) >= self.max_size:
@@ -57,6 +59,7 @@ class Cache:
 
         self.cache[key] = Item(key, value, expires, priority)
         self.expires.insert((expires, key))
+        self.priorities.insert((priority, key))
 
     # First point of LRU - Expiration time
     def evict(self, now):
@@ -72,11 +75,13 @@ class Cache:
                 break
 
             self.expires.pop()
-            del self.cache[key]
-
+            item = self.cache.pop(key)
+            self.priorities.remove((item.priority, key))
+        # If none expired, remove with the lowest priority
         if len(self.cache) == initial_size:
-            _, key = self.expires.pop()
-            del self.cache[key]
+            _, key = self.priorities.pop()
+            item = self.cache.pop(key)
+            self.expires.remove((item.expires, key))
 
 
 # Need a data structure which will efficiently remove the smallest element
@@ -100,10 +105,10 @@ class PriorityQueue:
         return first_element
 
     # O(n)
-    def remove(self, item: tuple):
+    def remove(self, item):
         self.data.remove(item)
 
     # O(n log n), can be optimized to O(n) with Timsort for example
-    def insert(self, item: tuple):
+    def insert(self, item):
         self.data.append(item)
         self.data.sort()
