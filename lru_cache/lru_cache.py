@@ -58,8 +58,9 @@ class Cache:
         self.expires.insert((expires, key))
         self.priorities.insert((priority, key))
 
-    # First point of LRU - Expiration time
-    # Second point of LRU - Priority
+    # First criteria of eviction -> Expiration time
+    # Second criteria of eviction -> Priority
+    # Third criteria of eviction -> LRU
     def evict(self, now):
         if not self.cache:
             return
