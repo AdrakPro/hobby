@@ -47,10 +47,7 @@ class Cache:
         # If the same element is in cache remove and insert again
         # Tuples (expires, key) compare lexicographically, it will be like comparing by expires alone, but with key along
         if key in self.cache:
-            item = self.cache.pop(key)
-            self.expires.remove((item.expires, key))
-            self.priorities.remove((item.priority, key))
-            del item
+            self.delete(key)
         # Evict if the max cache size is exceeded
         elif len(self.cache) >= self.max_size:
             self.evict(now)
@@ -75,14 +72,18 @@ class Cache:
             if expires > now:
                 break
 
-            self.expires.pop()
-            item = self.cache.pop(key)
-            self.priorities.remove((item.priority, key))
+            self.delete(key)
         # If none expired, remove with the lowest priority
         if len(self.cache) == initial_size:
             _, key = self.priorities.pop()
-            item = self.cache.pop(key)
-            self.expires.remove((item.expires, key))
+            self.delete(key)
+
+    def delete(self, key):
+        # * -> unpack tuple and return two last values (priority, expires)
+        *_, expires, priority = self.cache.pop(key)
+        self.expires.remove((expires, key))
+        self.priorities.remove((priority, key))
+
 
 
 # Need a data structure which will efficiently remove the smallest element
