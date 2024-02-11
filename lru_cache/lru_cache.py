@@ -8,6 +8,7 @@
 # Implement Cache and Item:
 
 import time
+from collections import OrderedDict
 from typing import NamedTuple
 
 
@@ -25,7 +26,9 @@ class Cache:
         # Dict provides average O(1) search/insert/delete
         self.cache = {}
         self.expires = PriorityQueue()
-        self.priorities = PriorityQueue()
+        # OrderedDict -> searching from functools.lru_cache() source code (doubly linked list)
+        self.priority_buckets = {}
+        self.priority_order = PriorityQueue()
 
     # Functions needed in cache:
     # get(key: String)
@@ -34,10 +37,14 @@ class Cache:
     def get(self, key: str):
         # Check if the key is in cache and not expired
         item = self.cache.get(key)
+
         if not item:
             return None
+
         if self.time() >= item.expires:
             return None
+
+        self.priority_buckets[item.priority].move_to_end(key)
 
         return item.value
 
@@ -56,7 +63,13 @@ class Cache:
 
         self.cache[key] = Item(key, value, expires, priority)
         self.expires.insert((expires, key))
-        self.priorities.insert((priority, key))
+
+        # If bucket is not existing, create new one. Insert empty data
+        priority_bucket = self.priority_buckets.get(priority)
+        if not priority_bucket:
+            priority_bucket = self.priority_buckets[priority] = OrderedDict()
+            self.priority_order.insert(priority)
+        priority_bucket[key] = None
 
     # First criteria of eviction -> Expiration time
     # Second criteria of eviction -> Priority
@@ -76,14 +89,24 @@ class Cache:
             self.delete(key)
         # If none expired, remove with the lowest priority
         if len(self.cache) == initial_size:
-            _, key = self.priorities.pop()
+            priority = self.priority_order.peek()
+            priority_bucket = self.priority_buckets.get(priority)
+            key = next(iter(priority_bucket))
             self.delete(key)
 
     def delete(self, key):
         # * -> unpack tuple and return two last values (priority, expires)
         *_, expires, priority = self.cache.pop(key)
         self.expires.remove((expires, key))
-        self.priorities.remove((priority, key))
+
+        # Don't get rid of empty buckets
+        priority_bucket = self.priority_buckets[priority]
+        del priority_bucket[key]
+
+        # Cleanup
+        if not priority_bucket:
+            del self.priority_buckets[priority]
+            self.priority_order.remove(priority)
 
 
 # Need a data structure which will efficiently remove the smallest element

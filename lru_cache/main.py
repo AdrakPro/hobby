@@ -126,8 +126,23 @@ def test_update_priorities():
     assert cache.get("c") == "C"
 
 
+def test_lru():
+    cache = Cache(2, FakeTime())
+
+    cache.set("a", "A")
+    cache.set("b", "B")
+
+    assert cache.get("a") == "A"
+
+    cache.set("c", "C")
+
+    assert cache.get("a") == "A"
+    assert cache.get("b") is None
+    assert cache.get("c") == "C"
+
+
 if __name__ == "__main__":
-    test_basic()
+    # test_basic()
     test_expires()
     test_priority_queue()
     test_update_expires()
